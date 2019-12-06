@@ -3,6 +3,8 @@ package com.mycompany.myapp.web.rest;
 import com.mycompany.myapp.domain.Batch;
 import com.mycompany.myapp.service.BatchService;
 import com.mycompany.myapp.web.rest.errors.BadRequestAlertException;
+import com.mycompany.myapp.service.dto.BatchCriteria;
+import com.mycompany.myapp.service.BatchQueryService;
 
 import io.github.jhipster.web.util.HeaderUtil;
 import io.github.jhipster.web.util.PaginationUtil;
@@ -40,8 +42,11 @@ public class BatchResource {
 
     private final BatchService batchService;
 
-    public BatchResource(BatchService batchService) {
+    private final BatchQueryService batchQueryService;
+
+    public BatchResource(BatchService batchService, BatchQueryService batchQueryService) {
         this.batchService = batchService;
+        this.batchQueryService = batchQueryService;
     }
 
     /**
@@ -90,14 +95,27 @@ public class BatchResource {
 
      * @param pageable the pagination information.
 
+     * @param criteria the criteria which the requested entities should match.
      * @return the {@link ResponseEntity} with status {@code 200 (OK)} and the list of batches in body.
      */
     @GetMapping("/batches")
-    public ResponseEntity<List<Batch>> getAllBatches(Pageable pageable) {
-        log.debug("REST request to get a page of Batches");
-        Page<Batch> page = batchService.findAll(pageable);
+    public ResponseEntity<List<Batch>> getAllBatches(BatchCriteria criteria, Pageable pageable) {
+        log.debug("REST request to get Batches by criteria: {}", criteria);
+        Page<Batch> page = batchQueryService.findByCriteria(criteria, pageable);
         HttpHeaders headers = PaginationUtil.generatePaginationHttpHeaders(ServletUriComponentsBuilder.fromCurrentRequest(), page);
         return ResponseEntity.ok().headers(headers).body(page.getContent());
+    }
+
+    /**
+    * {@code GET  /batches/count} : count all the batches.
+    *
+    * @param criteria the criteria which the requested entities should match.
+    * @return the {@link ResponseEntity} with status {@code 200 (OK)} and the count in body.
+    */
+    @GetMapping("/batches/count")
+    public ResponseEntity<Long> countBatches(BatchCriteria criteria) {
+        log.debug("REST request to count Batches by criteria: {}", criteria);
+        return ResponseEntity.ok().body(batchQueryService.countByCriteria(criteria));
     }
 
     /**
