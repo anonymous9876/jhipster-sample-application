@@ -10,6 +10,7 @@ paginate Batch with pagination
 // dto * with mapstruct
 
 // Set service options to all except few
+filter *
 service all with serviceImpl
 
 // Set an angular suffix
