@@ -1,0 +1,20 @@
+{
+    "name": "Batch",
+    "fields": [
+        {
+            "fieldName": "reference",
+            "fieldType": "String"
+        }
+    ],
+    "relationships": [],
+    "changelogDate": "20191206153551",
+    "entityTableName": "batch",
+    "dto": "no",
+    "pagination": "pagination",
+    "service": "serviceImpl",
+    "jpaMetamodelFiltering": false,
+    "fluentMethods": true,
+    "readOnly": false,
+    "clientRootFolder": "",
+    "applications": "*"
+}
