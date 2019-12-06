@@ -2,9 +2,13 @@ entity Batch {
 	reference String
 }
 
+entity Request {
+	reference String
+}
+
 
 // Set pagination options
-paginate Batch with pagination
+paginate * with pagination
 
 // Use Data Transfert Objects (DTO)
 // dto * with mapstruct
