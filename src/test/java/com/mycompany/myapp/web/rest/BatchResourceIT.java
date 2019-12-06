@@ -5,6 +5,8 @@ import com.mycompany.myapp.domain.Batch;
 import com.mycompany.myapp.repository.BatchRepository;
 import com.mycompany.myapp.service.BatchService;
 import com.mycompany.myapp.web.rest.errors.ExceptionTranslator;
+import com.mycompany.myapp.service.dto.BatchCriteria;
+import com.mycompany.myapp.service.BatchQueryService;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -44,6 +46,9 @@ public class BatchResourceIT {
     private BatchService batchService;
 
     @Autowired
+    private BatchQueryService batchQueryService;
+
+    @Autowired
     private MappingJackson2HttpMessageConverter jacksonMessageConverter;
 
     @Autowired
@@ -65,7 +70,7 @@ public class BatchResourceIT {
     @BeforeEach
     public void setup() {
         MockitoAnnotations.initMocks(this);
-        final BatchResource batchResource = new BatchResource(batchService);
+        final BatchResource batchResource = new BatchResource(batchService, batchQueryService);
         this.restBatchMockMvc = MockMvcBuilders.standaloneSetup(batchResource)
             .setCustomArgumentResolvers(pageableArgumentResolver)
             .setControllerAdvice(exceptionTranslator)
@@ -167,6 +172,138 @@ public class BatchResourceIT {
             .andExpect(jsonPath("$.id").value(batch.getId().intValue()))
             .andExpect(jsonPath("$.reference").value(DEFAULT_REFERENCE));
     }
+
+
+    @Test
+    @Transactional
+    public void getBatchesByIdFiltering() throws Exception {
+        // Initialize the database
+        batchRepository.saveAndFlush(batch);
+
+        Long id = batch.getId();
+
+        defaultBatchShouldBeFound("id.equals=" + id);
+        defaultBatchShouldNotBeFound("id.notEquals=" + id);
+
+        defaultBatchShouldBeFound("id.greaterThanOrEqual=" + id);
+        defaultBatchShouldNotBeFound("id.greaterThan=" + id);
+
+        defaultBatchShouldBeFound("id.lessThanOrEqual=" + id);
+        defaultBatchShouldNotBeFound("id.lessThan=" + id);
+    }
+
+
+    @Test
+    @Transactional
+    public void getAllBatchesByReferenceIsEqualToSomething() throws Exception {
+        // Initialize the database
+        batchRepository.saveAndFlush(batch);
+
+        // Get all the batchList where reference equals to DEFAULT_REFERENCE
+        defaultBatchShouldBeFound("reference.equals=" + DEFAULT_REFERENCE);
+
+        // Get all the batchList where reference equals to UPDATED_REFERENCE
+        defaultBatchShouldNotBeFound("reference.equals=" + UPDATED_REFERENCE);
+    }
+
+    @Test
+    @Transactional
+    public void getAllBatchesByReferenceIsNotEqualToSomething() throws Exception {
+        // Initialize the database
+        batchRepository.saveAndFlush(batch);
+
+        // Get all the batchList where reference not equals to DEFAULT_REFERENCE
+        defaultBatchShouldNotBeFound("reference.notEquals=" + DEFAULT_REFERENCE);
+
+        // Get all the batchList where reference not equals to UPDATED_REFERENCE
+        defaultBatchShouldBeFound("reference.notEquals=" + UPDATED_REFERENCE);
+    }
+
+    @Test
+    @Transactional
+    public void getAllBatchesByReferenceIsInShouldWork() throws Exception {
+        // Initialize the database
+        batchRepository.saveAndFlush(batch);
+
+        // Get all the batchList where reference in DEFAULT_REFERENCE or UPDATED_REFERENCE
+        defaultBatchShouldBeFound("reference.in=" + DEFAULT_REFERENCE + "," + UPDATED_REFERENCE);
+
+        // Get all the batchList where reference equals to UPDATED_REFERENCE
+        defaultBatchShouldNotBeFound("reference.in=" + UPDATED_REFERENCE);
+    }
+
+    @Test
+    @Transactional
+    public void getAllBatchesByReferenceIsNullOrNotNull() throws Exception {
+        // Initialize the database
+        batchRepository.saveAndFlush(batch);
+
+        // Get all the batchList where reference is not null
+        defaultBatchShouldBeFound("reference.specified=true");
+
+        // Get all the batchList where reference is null
+        defaultBatchShouldNotBeFound("reference.specified=false");
+    }
+                @Test
+    @Transactional
+    public void getAllBatchesByReferenceContainsSomething() throws Exception {
+        // Initialize the database
+        batchRepository.saveAndFlush(batch);
+
+        // Get all the batchList where reference contains DEFAULT_REFERENCE
+        defaultBatchShouldBeFound("reference.contains=" + DEFAULT_REFERENCE);
+
+        // Get all the batchList where reference contains UPDATED_REFERENCE
+        defaultBatchShouldNotBeFound("reference.contains=" + UPDATED_REFERENCE);
+    }
+
+    @Test
+    @Transactional
+    public void getAllBatchesByReferenceNotContainsSomething() throws Exception {
+        // Initialize the database
+        batchRepository.saveAndFlush(batch);
+
+        // Get all the batchList where reference does not contain DEFAULT_REFERENCE
+        defaultBatchShouldNotBeFound("reference.doesNotContain=" + DEFAULT_REFERENCE);
+
+        // Get all the batchList where reference does not contain UPDATED_REFERENCE
+        defaultBatchShouldBeFound("reference.doesNotContain=" + UPDATED_REFERENCE);
+    }
+
+    /**
+     * Executes the search, and checks that the default entity is returned.
+     */
+    private void defaultBatchShouldBeFound(String filter) throws Exception {
+        restBatchMockMvc.perform(get("/api/batches?sort=id,desc&" + filter))
+            .andExpect(status().isOk())
+            .andExpect(content().contentType(MediaType.APPLICATION_JSON_UTF8_VALUE))
+            .andExpect(jsonPath("$.[*].id").value(hasItem(batch.getId().intValue())))
+            .andExpect(jsonPath("$.[*].reference").value(hasItem(DEFAULT_REFERENCE)));
+
+        // Check, that the count call also returns 1
+        restBatchMockMvc.perform(get("/api/batches/count?sort=id,desc&" + filter))
+            .andExpect(status().isOk())
+            .andExpect(content().contentType(MediaType.APPLICATION_JSON_UTF8_VALUE))
+            .andExpect(content().string("1"));
+    }
+
+    /**
+     * Executes the search, and checks that the default entity is not returned.
+     */
+    private void defaultBatchShouldNotBeFound(String filter) throws Exception {
+        restBatchMockMvc.perform(get("/api/batches?sort=id,desc&" + filter))
+            .andExpect(status().isOk())
+            .andExpect(content().contentType(MediaType.APPLICATION_JSON_UTF8_VALUE))
+            .andExpect(jsonPath("$").isArray())
+            .andExpect(jsonPath("$").isEmpty());
+
+        // Check, that the count call also returns 0
+        restBatchMockMvc.perform(get("/api/batches/count?sort=id,desc&" + filter))
+            .andExpect(status().isOk())
+            .andExpect(content().contentType(MediaType.APPLICATION_JSON_UTF8_VALUE))
+            .andExpect(content().string("0"));
+    }
+
 
     @Test
     @Transactional
